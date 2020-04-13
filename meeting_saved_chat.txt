@@ -1,0 +1,12 @@
+16:11:43	 From Tianhao Wang : DPSGD
+	https://arxiv.org/pdf/1607.00133.pdf
+	https://arxiv.org/abs/1510.01799
+	https://github.com/gzhang01/CS227FinalProject/blob/master/code/privateLogReg.py
+16:15:47	 From Tianhao Wang : https://github.com/Duuuuuu/Large-Scale-Distributed-Sentiment-Analysis-with-RNNs
+16:21:50	 From Rockyang : https://www.elastic.co/guide/en/kibana/current/xpack-ml-anomalies.html
+16:22:36	 From Rockyang : https://medium.com/velotio-perspectives/machine-learning-for-your-infrastructure-anomaly-detection-with-elastic-x-pack-a871e7f6dd31
+16:25:18	 From Litao Yan : https://www.kaggle.com/tsdaemon/mapreduce-for-batch-processing-of-a-big-dataset
+16:25:36	 From Litao Yan : https://www.kaggle.com/c/favorita-grocery-sales-forecasting
+16:30:54	 From Tianhao Wang : https://sophieyanzhao.github.io/
+16:47:14	 From Tianhao Wang : https://docs.google.com/document/d/1OWtiNAGawgMahkhv72AGQmls_KjZYeGlhQXYgol5ijI/edit?usp=sharing
+16:59:44	 From Tianhao Wang : We employ MapReduce on AWS cluster to first preprocess the large amount of data. The mapper processes the input line by line, and the reducer combines the sorted intermediate output. HDF5 file format has been used to load the data without blowing up the memory. After processing the data, we use an AWS GPU cluster to distribute the workload across multiple GPUs by using large minibatch technique to speed up the RNN training on Pytorch and using its MPI interface with NCCL backend for communication between nodes.
