@@ -1,12 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import csv
-from scipy.stats import norm
-import pickle
 
-false_rates_dict = {}
 
 # read in the data from the CSV file
+# Target Feature: employed (5)
+# Leave out: blackfemale, targeted
 def read_data(file):
     with open(file, 'rb') as f:
         next(f) # skip labels
