@@ -33,7 +33,6 @@ def binary_acc(y_pred, y_test):
     y_pred_tag = torch.round(torch.sigmoid(y_pred))
     correct_results_sum = (y_pred_tag == y_test).sum().float()
     acc = correct_results_sum/y_test.shape[0]
-    acc = torch.round(acc * 100)
     return acc
 
 
@@ -101,7 +100,7 @@ def train(model, device, data_file, optimizer, epoch_nb, batch_size):
     print('Epoch:', epoch, 'Loss:', loss_epoch, 'Acc:', acc_epoch)
 
 
-def DPtrain(model, device, data_file, optimizer, epoch_nb):
+def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
   
   x_train, y_train, x_test, y_test = read_data(data_file)
 
@@ -147,6 +146,28 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb):
       print('Epoch:', epoch, 'Batch: ['+str(i)+'/'+str(batches_per_epoch)+']',
             'Loss:', batch_loss, 'Acc:', batch_acc)
 
+    train_loss, train_acc = test(model, device, x_train, y_train)
+    test_loss, test_acc = test(model, device, x_test, y_test)
+
+    print('Epoch:', epoch, 'Train Loss:', train_loss, 'Test Loss:', test_loss,
+        'Train Acc:', train_acc, 'Test Acc', test_acc)
+
+    if test_acc > target_acc:
+        return
+
+
+def test(model, device, X_data, Y_data):
+    model.eval()
+    lossFnc = nn.BCEWithLogitsLoss()
+
+    with torch.no_grad():
+        X_data, Y_data = X_data.to(device), Y_data.to(device)
+        Y_pred = model(X_data)
+        loss = lossFnc(Y_pred, Y_data.unsqueeze(1))
+        acc = binary_acc(Y_pred, Y_data.unsqueeze(1))
+
+    return loss.item(), acc.item()
+
 
 if __name__=='__main__':
     model = Network()
@@ -154,8 +175,8 @@ if __name__=='__main__':
 
     l2_norm_clip = 3
     noise_multiplier = 0.9
-    batch_size = 128
-    minibatch_size = 1 
+    batch_size = 256
+    minibatch_size = 3 
 
     optimizer = DPSGD(
         params = model.parameters(),
@@ -163,7 +184,7 @@ if __name__=='__main__':
         noise_multiplier = noise_multiplier,
         batch_size = batch_size,
         minibatch_size = minibatch_size, 
-        lr = 0.001,
+        lr = 0.01,
     )
 
-    DPtrain(model, device, DIR+'CaPUMS5full.csv', optimizer, epoch_nb=10)
+    DPtrain(model, device, DIR+'CaPUMS5full.csv', optimizer, epoch_nb=10, target_acc=0.65)
