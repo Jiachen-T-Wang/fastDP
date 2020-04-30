@@ -10,23 +10,11 @@ import pandas as pd
 import csv
 
 from dpsgd import DPSGD, DPAdam, DPAdagrad, DPRMSprop
+from mlp import Network
 
 
 DIR = './drive/My Drive/Colab Notebooks/CS205/'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-class Network(nn.Module):
-  def __init__(self):
-    super(Network, self).__init__()
-    self.fc1 = nn.Linear(9, 50)
-    self.fc2 = nn.Linear(50, 1)
-
-  def forward(self, x):
-    x = self.fc1(x)
-    x = F.relu(x)
-    output = self.fc2(x)
-    return output
 
 
 def binary_acc(y_pred, y_test):
