@@ -8,48 +8,15 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas as pd
 import csv
+import time
 
 from dpsgd import DPSGD, DPAdam, DPAdagrad, DPRMSprop
 from mlp import Network
+from utility import *
 
 
-DIR = './drive/My Drive/Colab Notebooks/CS205/'
+DIR = 'data/'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def binary_acc(y_pred, y_test):
-    y_pred_tag = torch.round(torch.sigmoid(y_pred))
-    correct_results_sum = (y_pred_tag == y_test).sum().float()
-    acc = correct_results_sum/y_test.shape[0]
-    return acc
-
-
-def read_data(file, max_line=10000):
-    line = 0
-    with open(file, 'rt') as f:
-        next(f) # skip labels
-        X, Y = [], []
-        reader = csv.reader(f)
-        for row in reader:
-
-            if sum(np.array(row)=='NA'): # leave out all NAs
-                continue
-
-            x1, x2 = map(int, row[:5]), map(int, row[6:-2])
-
-            x = list(x1) + list(x2)
-
-            X.append(x)
-            Y.append(int(row[5]))
-            line += 1
-            if line > max_line: break
-
-    X, Y = np.array(X), np.array(Y)
-
-    x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=69)
-    print(x_train.shape, y_train.shape)
-
-    return torch.Tensor(x_train), torch.Tensor(y_train), torch.Tensor(x_test), torch.Tensor(y_test)
 
 
 # Regular Training
@@ -106,6 +73,8 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
     batch_loss = 0
     batch_acc = 0
 
+    end = time.time()
+
     for i in range(batches_per_epoch):
       idx = np.random.randint(0, x_train.shape[0], batch_size)
       x_train_batch, y_train_batch = x_train[idx], y_train[idx]
@@ -131,14 +100,16 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
         
       optimizer.step()
 
-      print('Epoch:', epoch, 'Batch: ['+str(i)+'/'+str(batches_per_epoch)+']',
-            'Loss:', batch_loss, 'Acc:', batch_acc)
+      #print('Epoch:', epoch, 'Batch: ['+str(i)+'/'+str(batches_per_epoch)+']',
+      #      'Loss:', batch_loss, 'Acc:', batch_acc)
+
+    epoch_time = time.time() - end
 
     train_loss, train_acc = test(model, device, x_train, y_train)
     test_loss, test_acc = test(model, device, x_test, y_test)
 
     print('Epoch:', epoch, 'Train Loss:', train_loss, 'Test Loss:', test_loss,
-        'Train Acc:', train_acc, 'Test Acc', test_acc)
+        'Train Acc:', train_acc, 'Test Acc', test_acc, 'Time:', epoch_time)
 
     if test_acc > target_acc:
         return
