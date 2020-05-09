@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.optim import SGD, Adam, Adagrad, RMSprop
 
 from sklearn.model_selection import train_test_split
 
@@ -22,6 +23,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Regular Training
 
 def train(model, device, data_file, optimizer, epoch_nb, batch_size):
+
+  if optimizer==None:
+    optimizer = SGD(model.parameters(), lr=0.01)
   
   x_train, y_train, x_test, y_test = read_data(data_file)
 
@@ -34,6 +38,9 @@ def train(model, device, data_file, optimizer, epoch_nb, batch_size):
   for epoch in range(epoch_nb):
     loss_epoch = 0
     acc_epoch = 0
+
+    end = time.time()
+
     for _ in range(batches_per_epoch):
       idx = np.random.randint(0, x_train.shape[0], batch_size)
       x_train_batch, y_train_batch = x_train[idx].to(device), y_train[idx].to(device)
@@ -49,10 +56,17 @@ def train(model, device, data_file, optimizer, epoch_nb, batch_size):
       loss.backward()
       optimizer.step()
 
+    epoch_time = time.time() - end
+
     loss_epoch /= batches_per_epoch
     acc_epoch /= batches_per_epoch
 
-    print('Epoch:', epoch, 'Loss:', loss_epoch, 'Acc:', acc_epoch)
+    test_loss, test_acc = test(model, device, x_test, y_test)
+    atk_acc = inversion_atk(model, device, x_train, y_train, target_col=8)
+
+    print('Epoch:', epoch, 'Train Loss:', loss_epoch, 'Train Acc:', acc_epoch, 
+          'Test Loss:', test_loss, 'Test Acc', test_acc, 
+          'Atk Acc:', atk_acc, 'Time:', epoch_time)
 
 
 def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
@@ -107,12 +121,11 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
 
     train_loss, train_acc = test(model, device, x_train, y_train)
     test_loss, test_acc = test(model, device, x_test, y_test)
+    atk_acc = inversion_atk(model, device, x_train, y_train, target_col=8)
 
     print('Epoch:', epoch, 'Train Loss:', train_loss, 'Test Loss:', test_loss,
-        'Train Acc:', train_acc, 'Test Acc', test_acc, 'Time:', epoch_time)
-
-    if test_acc > target_acc:
-        return
+          'Train Acc:', train_acc, 'Test Acc', test_acc, 'Atk Acc:', atk_acc, 
+          'Time:', epoch_time)
 
 
 def test(model, device, X_data, Y_data):
@@ -146,4 +159,5 @@ if __name__=='__main__':
         lr = 0.01,
     )
 
-    DPtrain(model, device, DIR+'CaPUMS5full.csv', optimizer, epoch_nb=10, target_acc=0.65)
+    train(model, device, 'CaPUMS5full.csv', optimizer=None, epoch_nb=10, batch_size=256)
+    #DPtrain(model, device, 'CaPUMS5full.csv', optimizer, epoch_nb=10, target_acc=0.65)

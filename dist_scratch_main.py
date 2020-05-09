@@ -1,6 +1,5 @@
 import os, sys
 from random import Random
-
 import numpy as np
 import time
 
@@ -18,10 +17,10 @@ from mlp import Network
 from utility import *
 
 
-def init_process(rank, size, backend='gloo'):
+def init_process(master_ip, master_port, rank, size, backend='gloo'):
     """ Initialize the distributed environment. """
-    os.environ['MASTER_ADDR'] = '172.31.8.207'
-    os.environ['MASTER_PORT'] = '23456'
+    os.environ['MASTER_ADDR'] = master_ip
+    os.environ['MASTER_PORT'] = master_port
     dist.init_process_group(backend, rank=rank, world_size=size)
 
 
@@ -33,11 +32,10 @@ def average_gradients(model):
         param.grad.data /= size
 
 
-def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
-  
-  # TODO: partition data
-  # x_train, y_train, x_test, y_test = read_data(data_file)
+def DPtrain(model, device, data_file, optimizer, epoch_nb):
 
+  # Since we do not have a sampler that can automatically distribute data
+  # we need to write our own version of data partitioner
   batch_size = optimizer.batch_size
   minibatch_size = optimizer.minibatch_size
 
@@ -47,7 +45,7 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
 
   model.train()
 
-  lossFnc = nn.BCEWithLogitsLoss().cuda()
+  lossFnc = nn.BCEWithLogitsLoss()
 
   batches_per_epoch = int(len(train_partition) / batch_size)
   minibatches_per_batch = int(batch_size / minibatch_size)
@@ -89,7 +87,7 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
 
     epoch_time = time.time()-end
 
-    epoch_loss, epoch_acc = epoch_loss/len(train_partition), epoch_acc/len(train_partition)
+    epoch_loss, epoch_acc = epoch_loss/(batches_per_epoch*batch_size), epoch_acc/(batches_per_epoch*batch_size)
 
     test_loss, test_acc = test(model, device, x_test, y_test)
 
@@ -175,18 +173,42 @@ def partition_dataset(batch_size, data_file):
 
 if __name__ == "__main__":
 
-    DIR = 'data/'
+    # Number of epochs to train for
+    num_epochs = 10
+
+    # Total Number of distributed processes
     size = 2
+
+    # Distributed backend type
+    dist_backend = 'nccl'
+
+    # The private IP address and port for master node
+    master_ip, master_port = '172.31.37.213', '23456'
+
+    # Rank of the current process
     rank = int(sys.argv[1])
-    torch.manual_seed(1234)
+
+    # Number of additional worker processes for dataloading
+    workers = 2
+
+    # Data Path
+    path = './CaPUMS5full.csv'
+
+    # Number of additional worker processes for dataloading
+    workers = 2
 
     print("Initialize Process Group...")
 
-    init_process(rank, size, backend='gloo')
+    # Initialize Process Group
+    init_process(master_ip, master_port, rank, size, backend=dist_backend)
+
+
     local_rank = int(sys.argv[2])
     device = torch.device('cuda', local_rank)
 
     print("Initialize Model...")
+
+    torch.manual_seed(1234)
 
     model = Network()
     model.to(device)
@@ -207,9 +229,5 @@ if __name__ == "__main__":
 
     print('Begin DP Training')
 
-    DPtrain(model, device, DIR+'CaPUMS5full.csv', optimizer, epoch_nb=10, target_acc=0.65)
-
-
-
-
+    DPtrain(model, device, path, optimizer, epoch_nb=10)
 
