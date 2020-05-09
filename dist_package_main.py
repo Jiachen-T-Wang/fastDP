@@ -164,7 +164,7 @@ if __name__=='__main__':
     batch_size = 256
     minibatch_size = 3 
 
-    # batch_size = int(batch_size / size)
+    batch_size = int(batch_size / size)
 
     optimizer = DPSGD(
         params = model.parameters(),

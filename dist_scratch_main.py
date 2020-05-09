@@ -162,7 +162,7 @@ def partition_dataset(batch_size, data_file):
     x_train, y_train, x_test, y_test = read_data(data_file)
     
     size = dist.get_world_size()
-    # batch_size = int(batch_size / float(size))  # Replace 128 to overall batch_size
+    batch_size = int(batch_size / float(size)) 
     partition_sizes = [1.0 / size for _ in range(size)]
     partitioner = DataPartitioner((x_train, y_train), partition_sizes)
 
