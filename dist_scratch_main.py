@@ -24,8 +24,13 @@ def init_process(master_ip, master_port, rank, size, backend='gloo'):
     dist.init_process_group(backend, rank=rank, world_size=size)
 
 
-""" Gradient averaging. """
-def average_gradients(model):
+""" 
+    Gradient averaging. 
+    Note: Parameters are never broadcast between processes. The module performs
+    an all-reduce step on gradients and assumes that they will be modified
+    by the optimizer in all processes in the same way.        
+"""
+def gradients_allreduce(model):
     size = float(dist.get_world_size())
     for param in model.parameters():
         dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
@@ -73,7 +78,7 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb):
         acc = binary_acc(pred_mb, y_train_mb.unsqueeze(1))
         loss.backward()
 
-        average_gradients(model)
+        gradients_allreduce(model)
 
         optimizer.minibatch_step()
 
@@ -81,9 +86,6 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb):
         epoch_acc += acc.item()
         
       optimizer.step()
-
-      #print('Epoch:', epoch, 'Batch: ['+str(i)+'/'+str(batches_per_epoch)+']',
-      #      'Loss:', batch_loss, 'Acc:', batch_acc)
 
     epoch_time = time.time()-end
 
@@ -173,29 +175,48 @@ def partition_dataset(batch_size, data_file):
 
 if __name__ == "__main__":
 
-    # Number of epochs to train for
-    num_epochs = 10
+    print('Collect Inputs...')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--size", type=int)
+    parser.add_argument("--master_ip", type=str)
+    parser.add_argument("--master_port", type=str)
+    parser.add_argument("--rank", type=int)
+    parser.add_argument("--local_rank", type=int)
+    parser.add_argument("--dist_backend", type=str, default='nccl')
+    parser.add_argument("--num_epoch", type=int, default=10)
+    parser.add_argument("--workers", type=int, default=2)
+    parser.add_argument("--path", type=str, default='./CaPUMS5full.csv')
+    parser.add_argument("--l2_norm_clip", type=float, default=3)
+    parser.add_argument("--noise_multiplier", type=float, default=0.9)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--minibatch_size", type=int, default=3)
+    parser.add_argument("--lr", type=float, default=0.01)
+    args = parser.parse_args()
 
     # Total Number of distributed processes
-    size = 2
-
-    # Distributed backend type
-    dist_backend = 'nccl'
+    size = args.size
 
     # The private IP address and port for master node
-    master_ip, master_port = '172.31.37.213', '23456'
+    master_ip, master_port = args.master_ip, args.master_port
 
-    # Rank of the current process
-    rank = int(sys.argv[1])
+    # Global rank of the current process
+    rank = args.rank
+
+    # Local rank of the current process
+    local_rank = args.local_rank
+
+    # Distributed backend type
+    dist_backend = args.dist_backend
+
+    # Number of epochs to train for
+    num_epochs = args.num_epochs
 
     # Number of additional worker processes for dataloading
-    workers = 2
+    workers = args.workers
 
     # Data Path
-    path = './CaPUMS5full.csv'
-
-    # Number of additional worker processes for dataloading
-    workers = 2
+    path = args.path
 
     print("Initialize Process Group...")
 
@@ -203,7 +224,6 @@ if __name__ == "__main__":
     init_process(master_ip, master_port, rank, size, backend=dist_backend)
 
 
-    local_rank = int(sys.argv[2])
     device = torch.device('cuda', local_rank)
 
     print("Initialize Model...")
@@ -213,10 +233,12 @@ if __name__ == "__main__":
     model = Network()
     model.to(device)
 
-    l2_norm_clip = 3
-    noise_multiplier = 0.9
-    batch_size = 256
-    minibatch_size = 3 
+    # training parameters setup
+    l2_norm_clip = args.l2_norm_clip
+    noise_multiplier = args.noise_multiplier
+    batch_size = args.batch_size
+    minibatch_size = args.minibatch_size
+    lr = args.lr
 
     optimizer = DPSGD(
         params = model.parameters(),
@@ -224,7 +246,7 @@ if __name__ == "__main__":
         noise_multiplier = noise_multiplier,
         batch_size = batch_size,
         minibatch_size = minibatch_size, 
-        lr = 0.01,
+        lr = lr,
     )
 
     print('Begin DP Training')

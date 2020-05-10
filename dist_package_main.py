@@ -3,6 +3,7 @@ import os, sys
 import numpy as np
 import pandas as pd
 import csv
+import argparse
 
 import torch
 import torch.nn as nn
@@ -89,15 +90,6 @@ def DPtrain(model, device, train_loader, optimizer, epoch_nb):
               'Time:', epoch_time)
 
 
-"""
-def validate(model, device, val_loader, epoch):
-    for _, test_data in enumerate(val_loader):
-        x_test, y_test = test_data[:, :-1], test_data[:,-1]
-        test_loss, test_acc = test(model, device, x_test, y_test)
-        print('Epoch:', epoch, 'Test Loss:', test_loss, 'Test Acc:', test_acc)      
-"""
-
-
 def test(model, device, X_data, Y_data):
     model.eval()
     lossFnc = nn.BCEWithLogitsLoss()
@@ -112,30 +104,50 @@ def test(model, device, X_data, Y_data):
 
 
 if __name__=='__main__':
-    
-    # Number of epochs to train for
-    num_epochs = 10
+
+    print('Collect Inputs...')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--size", type=int)
+    parser.add_argument("--master_ip", type=str)
+    parser.add_argument("--master_port", type=str)
+    parser.add_argument("--rank", type=int)
+    parser.add_argument("--local_rank", type=int)
+    parser.add_argument("--dist_backend", type=str, default='nccl')
+    parser.add_argument("--num_epoch", type=int, default=10)
+    parser.add_argument("--workers", type=int, default=2)
+    parser.add_argument("--path", type=str, default='./CaPUMS5full.csv')
+    parser.add_argument("--l2_norm_clip", type=float, default=3)
+    parser.add_argument("--noise_multiplier", type=float, default=0.9)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--minibatch_size", type=int, default=3)
+    parser.add_argument("--lr", type=float, default=0.01)
+    args = parser.parse_args()
 
     # Total Number of distributed processes
-    size = 2
-
-    # Distributed backend type
-    dist_backend = 'nccl'
+    size = args.size
 
     # The private IP address and port for master node
-    master_ip, master_port = '172.31.37.213', '23456'
+    master_ip, master_port = args.master_ip, args.master_port
 
-    # Rank of the current process
-    rank = int(sys.argv[1])
+    # Global rank of the current process
+    rank = args.rank
+
+    # Local rank of the current process
+    local_rank = args.local_rank
+
+    # Distributed backend type
+    dist_backend = args.dist_backend
+
+    # Number of epochs to train for
+    num_epochs = args.num_epochs
 
     # Number of additional worker processes for dataloading
-    workers = 2
+    workers = args.workers
 
     # Data Path
-    path = './CaPUMS5full.csv'
+    path = args.path
 
-    # Number of additional worker processes for dataloading
-    workers = 2
 
     print("Initialize Process Group...")
 
@@ -143,7 +155,6 @@ if __name__=='__main__':
     init_process(master_ip, master_port, rank, size, backend=dist_backend)
 
     # Establish Local Rank and set device on this node
-    local_rank = int(sys.argv[2])
     dp_device_ids = [local_rank]
     device = torch.device('cuda', local_rank)
 
@@ -159,11 +170,13 @@ if __name__=='__main__':
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=dp_device_ids, output_device=local_rank)
 
     # training parameters setup
-    l2_norm_clip = 3
-    noise_multiplier = 0.9
-    batch_size = 256
-    minibatch_size = 3 
+    l2_norm_clip = args.l2_norm_clip
+    noise_multiplier = args.noise_multiplier
+    batch_size = args.batch_size
+    minibatch_size = args.minibatch_size
+    lr = args.lr
 
+    # Convert global batchsize to local batchsize
     batch_size = int(batch_size / size)
 
     optimizer = DPSGD(
@@ -172,7 +185,7 @@ if __name__=='__main__':
         noise_multiplier = noise_multiplier,
         batch_size = batch_size,
         minibatch_size = minibatch_size, 
-        lr = 0.01,
+        lr = lr,
     )
 
 
