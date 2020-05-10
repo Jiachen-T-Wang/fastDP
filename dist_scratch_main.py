@@ -2,8 +2,8 @@ import os, sys
 from random import Random
 import numpy as np
 import time
-
 import argparse
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,12 +17,12 @@ from mlp import Network
 from utility import *
 
 
+"""
 def init_process(master_ip, master_port, rank, size, backend='gloo'):
-    """ Initialize the distributed environment. """
     os.environ['MASTER_ADDR'] = master_ip
     os.environ['MASTER_PORT'] = master_port
     dist.init_process_group(backend, rank=rank, world_size=size)
-
+"""
 
 """ 
     Gradient averaging. 
@@ -112,7 +112,6 @@ def test(model, device, X_data, Y_data):
     return loss.item(), acc.item()
 
 
-
 """ Dataset partitioning helper """
 class Partition(object):
 
@@ -186,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--dist_backend", type=str, default='nccl')
     parser.add_argument("--num_epoch", type=int, default=10)
     parser.add_argument("--workers", type=int, default=2)
-    parser.add_argument("--path", type=str, default='./CaPUMS5full.csv')
+    parser.add_argument("--path", type=str, default='data/CaPUMS5full.csv')
     parser.add_argument("--l2_norm_clip", type=float, default=3)
     parser.add_argument("--noise_multiplier", type=float, default=0.9)
     parser.add_argument("--batch_size", type=int, default=256)

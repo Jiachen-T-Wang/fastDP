@@ -97,4 +97,11 @@ def read_data_package(file, max_line = MAX_LINE):
     return torch.Tensor(train), torch.Tensor(val)
 
 
+def init_process(master_ip, master_port, rank, size, backend='gloo'):
+    """ Initialize the distributed environment. """
+    os.environ['MASTER_ADDR'] = master_ip
+    os.environ['MASTER_PORT'] = master_port
+    dist.init_process_group(backend, rank=rank, world_size=size)
+
+
 

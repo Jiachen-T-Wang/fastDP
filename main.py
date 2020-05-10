@@ -1,3 +1,9 @@
+import numpy as np
+import pandas as pd
+import csv
+import time
+import argparse
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,18 +12,9 @@ from torch.optim import SGD, Adam, Adagrad, RMSprop
 
 from sklearn.model_selection import train_test_split
 
-import numpy as np
-import pandas as pd
-import csv
-import time
-
 from dpsgd import DPSGD, DPAdam, DPAdagrad, DPRMSprop
 from mlp import Network
 from utility import *
-
-
-DIR = 'data/'
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # Regular Training
@@ -69,7 +66,7 @@ def train(model, device, data_file, optimizer, epoch_nb, batch_size):
           'Atk Acc:', atk_acc, 'Time:', epoch_time)
 
 
-def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
+def DPtrain(model, device, data_file, optimizer, epoch_nb):
   
   x_train, y_train, x_test, y_test = read_data(data_file)
 
@@ -114,9 +111,6 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
         
       optimizer.step()
 
-      #print('Epoch:', epoch, 'Batch: ['+str(i)+'/'+str(batches_per_epoch)+']',
-      #      'Loss:', batch_loss, 'Acc:', batch_acc)
-
     epoch_time = time.time() - end
 
     train_loss, train_acc = test(model, device, x_train, y_train)
@@ -142,13 +136,38 @@ def test(model, device, X_data, Y_data):
 
 
 if __name__=='__main__':
+
+    print('Collect Inputs...')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num_epoch", type=int, default=10)
+    parser.add_argument("--path", type=str, default='data/CaPUMS5full.csv')
+    parser.add_argument("--l2_norm_clip", type=float, default=3)
+    parser.add_argument("--noise_multiplier", type=float, default=0.9)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--minibatch_size", type=int, default=3)
+    parser.add_argument("--lr", type=float, default=0.01)
+    args = parser.parse_args()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Number of epochs to train for
+    num_epochs = args.num_epochs
+
+    # Data Path
+    path = args.path
+
+    print('Initialize Model ...')
+
     model = Network()
     model.to(device)
 
-    l2_norm_clip = 3
-    noise_multiplier = 0.9
-    batch_size = 256
-    minibatch_size = 3 
+    # training parameters setup
+    l2_norm_clip = args.l2_norm_clip
+    noise_multiplier = args.noise_multiplier
+    batch_size = args.batch_size
+    minibatch_size = args.minibatch_size
+    lr = args.lr
 
     optimizer = DPSGD(
         params = model.parameters(),
@@ -156,8 +175,9 @@ if __name__=='__main__':
         noise_multiplier = noise_multiplier,
         batch_size = batch_size,
         minibatch_size = minibatch_size, 
-        lr = 0.01,
+        lr = lr,
     )
 
-    train(model, device, 'CaPUMS5full.csv', optimizer=None, epoch_nb=10, batch_size=256)
-    #DPtrain(model, device, 'CaPUMS5full.csv', optimizer, epoch_nb=10, target_acc=0.65)
+    print('Begin DP Training')
+
+    DPtrain(model, device, path, optimizer, epoch_nb=num_epochs)
