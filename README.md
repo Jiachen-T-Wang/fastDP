@@ -1,7 +1,6 @@
 ![privatesign](images/private_sign.jpg)
 
 # Large-Scale Distributed Private Learning with DPSGD
--
 
 Harvard CS205 Final Project, Spring 2020
 
