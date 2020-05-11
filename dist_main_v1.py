@@ -3,6 +3,7 @@ import os, sys
 import numpy as np
 import pandas as pd
 import csv
+import json
 import argparse
 
 import torch
@@ -19,14 +20,6 @@ from sklearn.model_selection import train_test_split
 from dpsgd import DPSGD, DPAdam, DPAdagrad, DPRMSprop
 from mlp import Network
 from utility import *
-
-
-"""
-def init_process(master_ip, master_port, rank, size, backend='gloo'):
-    os.environ['MASTER_ADDR'] = master_ip
-    os.environ['MASTER_PORT'] = master_port
-    dist.init_process_group(backend, rank=rank, world_size=size)
-"""
 
 
 def DPtrain(model, device, train_loader, optimizer, epoch_nb):
@@ -109,6 +102,16 @@ if __name__=='__main__':
     print('Collect Inputs...')
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--settings_path", type=str)
+    parser.add_argument("--rank", type=int)
+    parser.add_argument("--local_rank", type=int)
+    args = parser.parse_args()
+
+    settings_json_fname = args.settings_path
+    train_settings = json.load(open(settings_json_fname))
+
+    """
+    parser = argparse.ArgumentParser()
     parser.add_argument("--size", type=int)
     parser.add_argument("--master_ip", type=str)
     parser.add_argument("--master_port", type=str)
@@ -124,12 +127,13 @@ if __name__=='__main__':
     parser.add_argument("--minibatch_size", type=int, default=3)
     parser.add_argument("--lr", type=float, default=0.01)
     args = parser.parse_args()
+    """
 
     # Total Number of distributed processes
-    size = args.size
+    size = train_settings['world_size']
 
     # The private IP address and port for master node
-    master_ip, master_port = args.master_ip, args.master_port
+    master_ip, master_port = train_settings['master_ip'], train_settings['master_port']
 
     # Global rank of the current process
     rank = args.rank
@@ -138,16 +142,13 @@ if __name__=='__main__':
     local_rank = args.local_rank
 
     # Distributed backend type
-    dist_backend = args.dist_backend
+    dist_backend = train_settings['dist_backend']
 
     # Number of epochs to train for
-    num_epochs = args.num_epochs
-
-    # Number of additional worker processes for dataloading
-    workers = args.workers
+    num_epochs = train_settings['num_epoch']
 
     # Data Path
-    path = args.path
+    path = train_settings['path']
 
 
     print("Initialize Process Group...")
@@ -171,11 +172,11 @@ if __name__=='__main__':
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=dp_device_ids, output_device=local_rank)
 
     # training parameters setup
-    l2_norm_clip = args.l2_norm_clip
-    noise_multiplier = args.noise_multiplier
-    batch_size = args.batch_size
-    minibatch_size = args.minibatch_size
-    lr = args.lr
+    l2_norm_clip = train_settings['l2_norm_clip']
+    noise_multiplier = train_settings['noise_multiplier']
+    batch_size = train_settings['batch_size']
+    minibatch_size = train_settings['minibatch_size']
+    lr = train_settings['lr']
 
     # Convert global batchsize to local batchsize
     batch_size = int(batch_size / size)
@@ -197,7 +198,7 @@ if __name__=='__main__':
     # Use DistributedSampler module to handle distributing the dataset across nodes when training
     train_sampler = torch.utils.data.distributed.DistributedSampler(trainset)
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=(train_sampler is None), 
-                                               num_workers=workers, pin_memory=False, sampler=train_sampler,
+                                               num_workers=2, pin_memory=False, sampler=train_sampler,
                                                drop_last=True)
     
     val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=workers, pin_memory=False)

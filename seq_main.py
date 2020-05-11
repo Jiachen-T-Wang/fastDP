@@ -3,6 +3,7 @@ import pandas as pd
 import csv
 import time
 import argparse
+import json
 
 import torch
 import torch.nn as nn
@@ -140,6 +141,14 @@ if __name__=='__main__':
     print('Collect Inputs...')
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--settings_path", type=str)
+    args = parser.parse_args()
+
+    settings_json_fname = args.settings_path
+    train_settings = json.load(open(settings_json_fname))
+
+    """
+    parser = argparse.ArgumentParser()
     parser.add_argument("--num_epochs", type=int, default=10)
     parser.add_argument("--path", type=str, default='data/CaPUMS5full.csv')
     parser.add_argument("--l2_norm_clip", type=float, default=3)
@@ -148,14 +157,15 @@ if __name__=='__main__':
     parser.add_argument("--minibatch_size", type=int, default=3)
     parser.add_argument("--lr", type=float, default=0.01)
     args = parser.parse_args()
+    """
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Number of epochs to train for
-    num_epochs = args.num_epochs
+    num_epochs = train_settings['num_epoch']
 
     # Data Path
-    path = args.path
+    path = train_settings['path']
 
     print('Initialize Model ...')
 
@@ -163,11 +173,11 @@ if __name__=='__main__':
     model.to(device)
 
     # training parameters setup
-    l2_norm_clip = args.l2_norm_clip
-    noise_multiplier = args.noise_multiplier
-    batch_size = args.batch_size
-    minibatch_size = args.minibatch_size
-    lr = args.lr
+    l2_norm_clip = train_settings['l2_norm_clip']
+    noise_multiplier = train_settings['noise_multiplier']
+    batch_size = train_settings['batch_size']
+    minibatch_size = train_settings['minibatch_size']
+    lr = train_settings['lr']
 
     optimizer = DPSGD(
         params = model.parameters(),
