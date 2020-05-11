@@ -140,7 +140,7 @@ if __name__=='__main__':
     print('Collect Inputs...')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_epoch", type=int, default=10)
+    parser.add_argument("--num_epochs", type=int, default=10)
     parser.add_argument("--path", type=str, default='data/CaPUMS5full.csv')
     parser.add_argument("--l2_norm_clip", type=float, default=3)
     parser.add_argument("--noise_multiplier", type=float, default=0.9)
