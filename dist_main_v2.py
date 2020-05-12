@@ -179,25 +179,6 @@ if __name__ == "__main__":
     settings_json_fname = args.settings_path
     train_settings = json.load(open(settings_json_fname))
 
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--size", type=int)
-    parser.add_argument("--master_ip", type=str)
-    parser.add_argument("--master_port", type=str)
-    parser.add_argument("--rank", type=int)
-    parser.add_argument("--local_rank", type=int)
-    parser.add_argument("--dist_backend", type=str, default='nccl')
-    parser.add_argument("--num_epoch", type=int, default=10)
-    parser.add_argument("--workers", type=int, default=2)
-    parser.add_argument("--path", type=str, default='data/CaPUMS5full.csv')
-    parser.add_argument("--l2_norm_clip", type=float, default=3)
-    parser.add_argument("--noise_multiplier", type=float, default=0.9)
-    parser.add_argument("--batch_size", type=int, default=256)
-    parser.add_argument("--minibatch_size", type=int, default=3)
-    parser.add_argument("--lr", type=float, default=0.01)
-    args = parser.parse_args()
-    """
-
     # Total Number of distributed processes
     size = train_settings['world_size']
 
@@ -219,11 +200,11 @@ if __name__ == "__main__":
     # Data Path
     path = train_settings['path']
 
+
     print("Initialize Process Group...")
 
     # Initialize Process Group
     init_process(master_ip, master_port, rank, size, backend=dist_backend)
-
 
     device = torch.device('cuda', local_rank)
 
