@@ -145,14 +145,16 @@ i. Go to "Security Groups" and edit the rules for the security group you created
 a. Activate the pytorch environment: `source activate pytorch_p36`;
   
 b. Install the latest Pytorch 1.1: `conda install pytorch cudatoolkit=10.0 -c pytorch`;
+
+c. Install h5py `pip install h5py`.
   
-c. Find the name of private IP of the node by running `ifconfig` (usually `ens3`) and export it to NCLL socket: `export NCCL_SOCKET_IFNAME=ens3` (add to `.bashrc` to make this change permanent);
+d. Find the name of private IP of the node by running `ifconfig` (usually `ens3`) and export it to NCLL socket: `export NCCL_SOCKET_IFNAME=ens3` (add to `.bashrc` to make this change permanent);
   
-d. Upload code files to each node, or simply `git clone` from the repository;
+e. Upload code files to each node, or simply `git clone` from the repository;
   
-e. Also, upload the data to each node if running without NFS (Network File System) setup;
+f. Also, upload the data to each node if running without NFS (Network File System) setup;
   
-f. Repeat above steps on each node.
+g. Repeat above steps on each node.
 
 **3. Set up NFS**
 
