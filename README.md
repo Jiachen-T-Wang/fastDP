@@ -24,7 +24,7 @@ Our solution separates into two stages, data preprocessing and the DPSGD trainin
 
 In terms of the infrastructure, since we didn't get approve from AWS to get more than 5 g3.4xlarge instances, we use at most 4 g3.4xlarge (or 2 g3.8xlarge, or 1 g3.16xlarge) instances to run the distributed version of DPSGD. 
 
-## Data Processing
+## Replicability Information: Data Processing
 
 ### MapReduce
 
@@ -113,7 +113,7 @@ a. Using the following command to execute the script on **1 executors** (worker 
     
 `$ spark-submit --num-executors 1 --executor-cores 4 spark_process.py`
 
-## Distributed DPSGD with GPU acceleration
+## Replicability Information: Distributed DPSGD with GPU acceleration
 
 ### Infrastructure Deploying & Environment Setup
 
@@ -216,7 +216,7 @@ python -m cProfile -o seq_main.profile seq_main.py --settings_path="config/seq_t
 Here's the interpretation of training parameters in `config/seq_main.json`:
 
  * num_epoch: total number of epochs
- * path: path of the training data
+ * path: path of the training data (the .h5 file downloaded from S3)
  * l2\_norm\_clip: gradient norm bound (privacy parameter)
  * noise_multiplier: gradient noise multiplier (privacy parameter)
  * batch_size: training batch size
@@ -276,15 +276,15 @@ Note that here the local rank of this process is 0 since this process only sees 
 
 ### CUDA GPU Information
 
-![cudainfo](reproduction-cudainfo.png)
+![cudainfo](images/reproduction-cudainfo.png)
 
 ### AWS Instance Information (g3.4xlarge)
 
-![g34xlarge](g34xlarge.png)
+![g34xlarge](images/g34xlarge.png)
 
 ### Operating System 
 
-![OS](os.png)
+![OS](images/os.png)
 
 
 
