@@ -2,12 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.distributed as dist
+
 
 from sklearn.model_selection import train_test_split
 
 import numpy as np
 import pandas as pd
-import csv
+import csv, os
 
 
 MAX_LINE = 10000

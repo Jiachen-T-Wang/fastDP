@@ -201,7 +201,7 @@ if __name__=='__main__':
                                                num_workers=2, pin_memory=False, sampler=train_sampler,
                                                drop_last=True)
     
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=workers, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=False)
 
     DPtrain(model, device, train_loader, optimizer, num_epochs)
 
