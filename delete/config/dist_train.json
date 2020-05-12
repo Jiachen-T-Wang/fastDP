@@ -1,10 +1,10 @@
 {
-    "world_size": 1,
-    "master_ip": "172.31.12.177",
+    "world_size": 2,
+    "master_ip": "172.16.254.1",
     "master_port": "23456",
     "dist_backend": "nccl",
     "num_epoch": 10,
-    "path": "dataset.h5",
+    "path": "data/CaPUMS5full.csv",
 
     "l2_norm_clip": 3,
     "noise_multiplier": 0.9,
