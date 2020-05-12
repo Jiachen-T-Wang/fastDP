@@ -1,72 +1,28 @@
+import numpy as np
+import pandas as pd
+import csv
+import time
+import argparse
+import json
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.optim import SGD, Adam, Adagrad, RMSprop
 
 from sklearn.model_selection import train_test_split
 
-import numpy as np
-import pandas as pd
-import csv
-
 from dpsgd import DPSGD, DPAdam, DPAdagrad, DPRMSprop
-
-
-DIR = './drive/My Drive/Colab Notebooks/CS205/'
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-class Network(nn.Module):
-  def __init__(self):
-    super(Network, self).__init__()
-    self.fc1 = nn.Linear(9, 50)
-    self.fc2 = nn.Linear(50, 1)
-
-  def forward(self, x):
-    x = self.fc1(x)
-    x = F.relu(x)
-    output = self.fc2(x)
-    return output
-
-
-def binary_acc(y_pred, y_test):
-    y_pred_tag = torch.round(torch.sigmoid(y_pred))
-    correct_results_sum = (y_pred_tag == y_test).sum().float()
-    acc = correct_results_sum/y_test.shape[0]
-    return acc
-
-
-def read_data(file, max_line=10000):
-    line = 0
-    with open(file, 'rt') as f:
-        next(f) # skip labels
-        X, Y = [], []
-        reader = csv.reader(f)
-        for row in reader:
-
-            if sum(np.array(row)=='NA'): # leave out all NAs
-                continue
-
-            x1, x2 = map(int, row[:5]), map(int, row[6:-2])
-
-            x = list(x1) + list(x2)
-
-            X.append(x)
-            Y.append(int(row[5]))
-            line += 1
-            if line > max_line: break
-
-    X, Y = np.array(X), np.array(Y)
-
-    x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=69)
-    print(x_train.shape, y_train.shape)
-
-    return torch.Tensor(x_train), torch.Tensor(y_train), torch.Tensor(x_test), torch.Tensor(y_test)
+from mlp import Network
+from utility import *
 
 
 # Regular Training
-
 def train(model, device, data_file, optimizer, epoch_nb, batch_size):
+
+  if optimizer==None:
+    optimizer = SGD(model.parameters(), lr=0.01)
   
   x_train, y_train, x_test, y_test = read_data(data_file)
 
@@ -79,6 +35,9 @@ def train(model, device, data_file, optimizer, epoch_nb, batch_size):
   for epoch in range(epoch_nb):
     loss_epoch = 0
     acc_epoch = 0
+
+    end = time.time()
+
     for _ in range(batches_per_epoch):
       idx = np.random.randint(0, x_train.shape[0], batch_size)
       x_train_batch, y_train_batch = x_train[idx].to(device), y_train[idx].to(device)
@@ -94,13 +53,20 @@ def train(model, device, data_file, optimizer, epoch_nb, batch_size):
       loss.backward()
       optimizer.step()
 
+    epoch_time = time.time() - end
+
     loss_epoch /= batches_per_epoch
     acc_epoch /= batches_per_epoch
 
-    print('Epoch:', epoch, 'Loss:', loss_epoch, 'Acc:', acc_epoch)
+    test_loss, test_acc = test(model, device, x_test, y_test)
+    atk_acc = inversion_atk(model, device, x_train, y_train, target_col=8)
+
+    print('Epoch:', epoch, 'Train Loss:', loss_epoch, 'Train Acc:', acc_epoch, 
+          'Test Loss:', test_loss, 'Test Acc', test_acc, 
+          'Atk Acc:', atk_acc, 'Time:', epoch_time)
 
 
-def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
+def DPtrain(model, device, data_file, optimizer, epoch_nb):
   
   x_train, y_train, x_test, y_test = read_data(data_file)
 
@@ -117,6 +83,8 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
   for epoch in range(epoch_nb):
     batch_loss = 0
     batch_acc = 0
+
+    end = time.time()
 
     for i in range(batches_per_epoch):
       idx = np.random.randint(0, x_train.shape[0], batch_size)
@@ -143,17 +111,15 @@ def DPtrain(model, device, data_file, optimizer, epoch_nb, target_acc):
         
       optimizer.step()
 
-      print('Epoch:', epoch, 'Batch: ['+str(i)+'/'+str(batches_per_epoch)+']',
-            'Loss:', batch_loss, 'Acc:', batch_acc)
+    epoch_time = time.time() - end
 
     train_loss, train_acc = test(model, device, x_train, y_train)
     test_loss, test_acc = test(model, device, x_test, y_test)
+    atk_acc = inversion_atk(model, device, x_train, y_train, target_col=8)
 
     print('Epoch:', epoch, 'Train Loss:', train_loss, 'Test Loss:', test_loss,
-        'Train Acc:', train_acc, 'Test Acc', test_acc)
-
-    if test_acc > target_acc:
-        return
+          'Train Acc:', train_acc, 'Test Acc', test_acc, 'Atk Acc:', atk_acc, 
+          'Time:', epoch_time)
 
 
 def test(model, device, X_data, Y_data):
@@ -170,13 +136,35 @@ def test(model, device, X_data, Y_data):
 
 
 if __name__=='__main__':
+
+    print('Collect Inputs...')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--settings_path", type=str)
+    args = parser.parse_args()
+
+    settings_json_fname = args.settings_path
+    train_settings = json.load(open(settings_json_fname))
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Number of epochs to train for
+    num_epochs = train_settings['num_epoch']
+
+    # Data Path
+    path = train_settings['path']
+
+    print('Initialize Model ...')
+
     model = Network()
     model.to(device)
 
-    l2_norm_clip = 3
-    noise_multiplier = 0.9
-    batch_size = 256
-    minibatch_size = 3 
+    # training parameters setup
+    l2_norm_clip = train_settings['l2_norm_clip']
+    noise_multiplier = train_settings['noise_multiplier']
+    batch_size = train_settings['batch_size']
+    minibatch_size = train_settings['minibatch_size']
+    lr = train_settings['lr']
 
     optimizer = DPSGD(
         params = model.parameters(),
@@ -184,7 +172,9 @@ if __name__=='__main__':
         noise_multiplier = noise_multiplier,
         batch_size = batch_size,
         minibatch_size = minibatch_size, 
-        lr = 0.01,
+        lr = lr,
     )
 
-    DPtrain(model, device, DIR+'CaPUMS5full.csv', optimizer, epoch_nb=10, target_acc=0.65)
+    print('Begin DP Training')
+
+    DPtrain(model, device, path, optimizer, epoch_nb=num_epochs)
