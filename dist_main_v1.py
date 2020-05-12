@@ -22,9 +22,10 @@ from mlp import Network
 from utility import *
 
 
-def DPtrain(model, device, train_loader, optimizer, epoch_nb):
+def DPtrain(model, device, train_loader, optimizer, epoch_nb, path):
 
-    _, test_data = read_data_package('./CaPUMS5full.csv', max_line=10000)
+    _, test_data = read_data_package(path)
+
     x_test, y_test = test_data[:, :-1], test_data[:, -1]
 
     print('Rank of Training Process:', dist.get_rank())
@@ -203,5 +204,5 @@ if __name__=='__main__':
     
     val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=False)
 
-    DPtrain(model, device, train_loader, optimizer, num_epochs)
+    DPtrain(model, device, train_loader, optimizer, num_epochs, path)
 
