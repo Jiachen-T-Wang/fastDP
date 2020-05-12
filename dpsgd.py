@@ -6,6 +6,8 @@ from torch.optim import SGD, Adam, Adagrad, RMSprop
 
 import numpy as np
 
+# This implementation is adapted from https://github.com/ChrisWaites/pyvacy
+
 
 def make_optimizer_class(optimizer):
     class DPOptimizerClass(optimizer):

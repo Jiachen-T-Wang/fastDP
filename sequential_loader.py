@@ -27,4 +27,4 @@ def read_data(file):
 
 
 if __name__ == "__main__":
-    print(read_data('data/mini_data.csv'))
+    print(read_data('data/CaPUMS5full.csv'))

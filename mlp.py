@@ -7,8 +7,8 @@ import torch.optim as optim
 """
 Deep Learning Architecture for predicting unemployment rate
 Input Dimension: 9, Output Dimension: 1
+Feel free to change model architectures
 """
-
 
 class Network(nn.Module):
   def __init__(self):
