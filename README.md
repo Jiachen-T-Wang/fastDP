@@ -181,6 +181,7 @@ d. Make the mount permanent (optional): add the following line `<Master Node Pri
 ### Running the Program
 
 **1. Getting the code processed data**
+
 Get the processed data file in hdf5 format from our project S3 bucket. The data format will be slightly different for Code Version 1 and 2. 
 
 Code Version 1: 
@@ -188,7 +189,7 @@ Code Version 1:
 wget https://cs205-dpsgd-dataset.s3.amazonaws.com/dataset_package.h5
 ```
 
-Code Version 2:
+Sequential and Code Version 2:
 ```
 wget https://cs205-dpsgd-dataset.s3.amazonaws.com/dataset.h5
 ```
